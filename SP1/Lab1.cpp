@@ -8,22 +8,32 @@ float speedX, speedY;
 bool dragged = false;
 int tempX=0, tempY=0;
 
+
+
 void Collision() {
 	if (recX + speedX <= clientRect.left) {
 		recX = 0;
 		speedX = -speedX;
+		if (speedX == 0)
+			speedX = 2;
 	}
 	if (recY + speedY <= clientRect.top) {
 		recY = 0;
 		speedY = -speedY;
+		if (speedY == 0)
+			speedY = 2;
 	}
 	if (recX + recWidth + speedX >= clientRect.right) {
 		recX = clientRect.right - recWidth;
 		speedX = -speedX;
+		if (speedX == 0)
+			speedX = -2;
 	}
 	if (recY + recHeight + speedY >= clientRect.bottom) {
 		recY = clientRect.bottom - recHeight;
 		speedY = -speedY;
+		if (speedY == 0)
+			speedY = -2;
 	}
 
 }
@@ -63,10 +73,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message,
 	{
 		POINT mousePos = { 0, 0 };
 		//GetCursorPos(&mousePos);
-		ClientToScreen(hWnd, &mousePos);
+		mousePos.x = LOWORD(lParam);
+		mousePos.y = HIWORD(lParam);
 		if (mousePos.x > recX && mousePos.x<recX + recWidth && mousePos.y>recY && mousePos.y < recY + recHeight)
 		{
 			dragged = true;
+			tempX = mousePos.x;
+			tempY = mousePos.y;
+		}
+	}
+	break;
+	case WM_LBUTTONUP:
+	{
+		dragged = false;
+	}
+	break;
+	case WM_MOUSEMOVE:
+	{
+		POINT mousePos = { 0, 0 };
+		//GetCursorPos(&mousePos);
+		mousePos.x = LOWORD(lParam);
+		mousePos.y = HIWORD(lParam);
+		if (dragged == true) {
+			recX += mousePos.x - tempX;
+			recY += mousePos.y - tempY;
 			tempX = mousePos.x;
 			tempY = mousePos.y;
 		}
@@ -85,11 +115,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message,
 			speedY = 5;
 	}
 	break;
-	case WM_LBUTTONUP:
-	{
-		dragged = false;
-	}
-	break;
+	
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
@@ -123,6 +149,53 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
+
+	/*HBITMAP hBitmap = (HBITMAP)LoadImage(NULL, L"D:\\pases.bmp", IMAGE_BITMAP, 0, 0,
+		LR_LOADFROMFILE | LR_CREATEDIBSECTION | LR_DEFAULTSIZE);
+
+	if (!hBitmap)
+		return 0;
+
+	// Получение размеров BMP-файла
+	BITMAP bitmap;
+	GetObject(hBitmap, sizeof(BITMAP), &bitmap);
+
+	// Создание DC для BMP-файла
+	HDC hDCBitmap = CreateCompatibleDC(NULL);
+	SelectObject(hDCBitmap, hBitmap);
+
+	// Создание DC для экрана
+	HDC hDCScreen = GetDC(hWnd);
+
+	// Создание маски для удаления фона
+	HBITMAP hMaskBitmap = CreateBitmap(bitmap.bmWidth, bitmap.bmHeight,
+		1, 1, NULL);
+	HDC hDCMask = CreateCompatibleDC(NULL);
+	SelectObject(hDCMask, hMaskBitmap);
+	SetBkColor(hDCBitmap, RGB(255, 255, 255));
+	BitBlt(hDCMask, 0, 0, bitmap.bmWidth,
+		bitmap.bmHeight,
+		hDCBitmap,
+		0,
+		0,
+		SRCCOPY);
+	SetBkColor(hDCBitmap, RGB(255, 255, 255));
+	SetTextColor(hDCBitmap, RGB(255, 255, 255));
+	BitBlt(hDCBitmap,
+		0,
+		0,
+		bitmap.bmWidth,
+		bitmap.bmHeight,
+		hDCMask,
+		0,
+		0,
+		SRCPAINT);
+
+	// Освобождение ресурсов
+	DeleteObject(hBitmap);
+	DeleteDC(hDCBitmap);
+	ReleaseDC(hWnd, hDCScreen);*/
+
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
@@ -138,22 +211,10 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 		
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
-		if (!dragged) {
-			recX += speedX;
-			recY += speedY;
-		}
-		else {
-			POINT mousePos = { 0, 0 };
-			ClientToScreen(hWnd, &mousePos);
-			if (mousePos.x != tempX) {
-				tempX = 0;
-			}
-			recX += mousePos.x-tempX;
-			recY += mousePos.y-tempY;
-			tempX = mousePos.x;
-			tempY = mousePos.y;
-			
-		}
+		recX += speedX;
+		recY += speedY;
+		
+		
 		if (speedX<1 && speedX>-1)
 			speedX = 0;
 		if (speedY<1 && speedY>-1)
