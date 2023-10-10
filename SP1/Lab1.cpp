@@ -1,12 +1,18 @@
 #include <Windows.h>
 
-RECT clientRect;
+RECT clientRect, clientFrame;
 float zDelta;
-int recWidth = 300, recHeight = 200;
+int recWidth = 200, recHeight = 200;
 int fwKeys, recX = 100, recY = 100;
 float speedX, speedY;
 bool dragged = false;
 int tempX=0, tempY=0;
+HDC hdc;
+HANDLE handleBack;
+const int BITMAP_SIZE = 200;
+POINT imageCord;
+BITMAP bm;
+HANDLE handleBitmap;
 
 
 
@@ -38,24 +44,52 @@ void Collision() {
 
 }
 
+void DrawImage(HANDLE& hBmp, BITMAP& bitmap)
+{
+	
+	RestoreDC(hdc, -1);
+	SaveDC(hdc);
+	FillRect(hdc, &clientFrame, (HBRUSH)(COLOR_WINDOW + 1));
+	RECT imageRect{ recX, recY, recX + bitmap.bmWidth, recY + bitmap.bmHeight };
+	HBRUSH hBrush = CreateSolidBrush(RGB(250, 118, 107));
+	FillRect(hdc, &imageRect, hBrush);
+	HDC hMemDC = CreateCompatibleDC(hdc);
+	HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemDC, hBmp);
+	if (hOldBitmap)
+	{
+		SetMapMode(hMemDC, GetMapMode(hdc));
+		TransparentBlt(hdc, recX, recY, BITMAP_SIZE, BITMAP_SIZE, hMemDC, 0, 0, bitmap.bmWidth, bitmap.bmHeight, RGB(192, 255, 255));
+		SelectObject(hMemDC, hOldBitmap);
+	}
+	DeleteDC(hMemDC);
+
+	RestoreDC(hdc, -1);
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message,
 	WPARAM wParam, LPARAM lParam)
 {
+	
 	switch (message)
 	{
+	case WM_CREATE:
+	{
+		handleBitmap = LoadImage(NULL, L"cup.bmp", IMAGE_BITMAP, BITMAP_SIZE, BITMAP_SIZE, LR_LOADFROMFILE | LR_LOADTRANSPARENT);
+		GetObject(handleBitmap, sizeof(bm), &bm);
+
+		imageCord = { 100, 100 };
+		break;
+	}
+	break;
 	case WM_PAINT:
 	{
 		GetClientRect(hWnd, &clientRect);
 		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hWnd, &ps);
-
-		FillRect(hdc, &clientRect, (HBRUSH)GetStockObject(WHITE_BRUSH));
-		//Rectangle(hdc, clientRect.left + 30, clientRect.top + 30, clientRect.right - 700, clientRect.bottom - 300);
-		Rectangle(hdc, recX, recY, recX+recWidth, recY+recHeight);
-		RECT box = { recX, recY, recX + recWidth, recY + recHeight};
-		FillRect(hdc, &box, (HBRUSH)GetStockObject(BLACK_BRUSH));
-
+		hdc = BeginPaint(hWnd, &ps);
+		FillRect(hdc, &clientRect, CreateSolidBrush(RGB(255, 255, 255)));
+		DrawImage(handleBitmap, bm);
 		EndPaint(hWnd, &ps);
+		break;
 	}
 	break;
 	
@@ -72,7 +106,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message,
 	case WM_LBUTTONDOWN:
 	{
 		POINT mousePos = { 0, 0 };
-		//GetCursorPos(&mousePos);
 		mousePos.x = LOWORD(lParam);
 		mousePos.y = HIWORD(lParam);
 		if (mousePos.x > recX && mousePos.x<recX + recWidth && mousePos.y>recY && mousePos.y < recY + recHeight)
@@ -91,7 +124,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message,
 	case WM_MOUSEMOVE:
 	{
 		POINT mousePos = { 0, 0 };
-		//GetCursorPos(&mousePos);
 		mousePos.x = LOWORD(lParam);
 		mousePos.y = HIWORD(lParam);
 		if (dragged == true) {
@@ -149,52 +181,6 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
-
-	/*HBITMAP hBitmap = (HBITMAP)LoadImage(NULL, L"D:\\pases.bmp", IMAGE_BITMAP, 0, 0,
-		LR_LOADFROMFILE | LR_CREATEDIBSECTION | LR_DEFAULTSIZE);
-
-	if (!hBitmap)
-		return 0;
-
-	// Получение размеров BMP-файла
-	BITMAP bitmap;
-	GetObject(hBitmap, sizeof(BITMAP), &bitmap);
-
-	// Создание DC для BMP-файла
-	HDC hDCBitmap = CreateCompatibleDC(NULL);
-	SelectObject(hDCBitmap, hBitmap);
-
-	// Создание DC для экрана
-	HDC hDCScreen = GetDC(hWnd);
-
-	// Создание маски для удаления фона
-	HBITMAP hMaskBitmap = CreateBitmap(bitmap.bmWidth, bitmap.bmHeight,
-		1, 1, NULL);
-	HDC hDCMask = CreateCompatibleDC(NULL);
-	SelectObject(hDCMask, hMaskBitmap);
-	SetBkColor(hDCBitmap, RGB(255, 255, 255));
-	BitBlt(hDCMask, 0, 0, bitmap.bmWidth,
-		bitmap.bmHeight,
-		hDCBitmap,
-		0,
-		0,
-		SRCCOPY);
-	SetBkColor(hDCBitmap, RGB(255, 255, 255));
-	SetTextColor(hDCBitmap, RGB(255, 255, 255));
-	BitBlt(hDCBitmap,
-		0,
-		0,
-		bitmap.bmWidth,
-		bitmap.bmHeight,
-		hDCMask,
-		0,
-		0,
-		SRCPAINT);
-
-	// Освобождение ресурсов
-	DeleteObject(hBitmap);
-	DeleteDC(hDCBitmap);
-	ReleaseDC(hWnd, hDCScreen);*/
 
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
