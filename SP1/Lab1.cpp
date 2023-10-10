@@ -1,10 +1,12 @@
 #include <Windows.h>
 
 RECT clientRect;
-int fwKeys, zDelta;
-int recWidth = 200, recHeight = 200;
-int recX = 100, recY = 100;
-int speedX, speedY;
+float zDelta;
+int recWidth = 300, recHeight = 200;
+int fwKeys, recX = 100, recY = 100;
+float speedX, speedY;
+bool dragged = false;
+int tempX=0, tempY=0;
 
 void Collision() {
 	if (recX + speedX <= clientRect.left) {
@@ -52,14 +54,42 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message,
 		fwKeys = GET_KEYSTATE_WPARAM(wParam);
 		zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 		if (fwKeys == 4)
-			speedX += zDelta / 20;
+			speedX += zDelta / 130;
 		else
-			speedY += zDelta / 20;
+			speedY += zDelta / 130;
 	}
 	break;
-	case WM_LBUTTONDBLCLK:
-		MessageBox(hWnd, L"Hello, World!", L"Message", MB_OK);
-		break;
+	case WM_LBUTTONDOWN:
+	{
+		POINT mousePos = { 0, 0 };
+		//GetCursorPos(&mousePos);
+		ClientToScreen(hWnd, &mousePos);
+		if (mousePos.x > recX && mousePos.x<recX + recWidth && mousePos.y>recY && mousePos.y < recY + recHeight)
+		{
+			dragged = true;
+			tempX = mousePos.x;
+			tempY = mousePos.y;
+		}
+	}
+	break;
+	case WM_KEYDOWN:
+	{
+		fwKeys=GET_KEYSTATE_WPARAM(wParam);
+		if (fwKeys == 'A')
+			speedX = -5;
+		if (fwKeys == 'W')
+			speedY = -5;
+		if (fwKeys == 'D')
+			speedX = 5;
+		if (fwKeys == 'S')
+			speedY = 5;
+	}
+	break;
+	case WM_LBUTTONUP:
+	{
+		dragged = false;
+	}
+	break;
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
@@ -97,19 +127,38 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 	{
 		RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
 		if (speedX > 0)
-			speedX -= 1;
+			speedX -= 0.1;
 		else if (speedX < 0)
-			speedX += 1;
+			speedX += 0.1;
 		if (speedY > 0)
-			speedY -= 1;
+			speedY -= 0.1;
 		else if (speedY < 0)
-			speedY += 1;
+			speedY += 0.1;
 		Collision();
 		
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
-		recX += speedX;
-		recY += speedY;
+		if (!dragged) {
+			recX += speedX;
+			recY += speedY;
+		}
+		else {
+			POINT mousePos = { 0, 0 };
+			ClientToScreen(hWnd, &mousePos);
+			if (mousePos.x != tempX) {
+				tempX = 0;
+			}
+			recX += mousePos.x-tempX;
+			recY += mousePos.y-tempY;
+			tempX = mousePos.x;
+			tempY = mousePos.y;
+			
+		}
+		if (speedX<1 && speedX>-1)
+			speedX = 0;
+		if (speedY<1 && speedY>-1)
+			speedY = 0;
+		
 	}
 	return (int)msg.wParam;
 }
