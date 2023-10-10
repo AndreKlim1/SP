@@ -1,6 +1,30 @@
 #include <Windows.h>
 
 RECT clientRect;
+int fwKeys, zDelta;
+int recWidth = 200, recHeight = 200;
+int recX = 100, recY = 100;
+int speedX, speedY;
+
+void Collision() {
+	if (recX + speedX <= clientRect.left) {
+		recX = 0;
+		speedX = -speedX;
+	}
+	if (recY + speedY <= clientRect.top) {
+		recY = 0;
+		speedY = -speedY;
+	}
+	if (recX + recWidth + speedX >= clientRect.right) {
+		recX = clientRect.right - recWidth;
+		speedX = -speedX;
+	}
+	if (recY + recHeight + speedY >= clientRect.bottom) {
+		recY = clientRect.bottom - recHeight;
+		speedY = -speedY;
+	}
+
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message,
 	WPARAM wParam, LPARAM lParam)
@@ -13,11 +37,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message,
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
 
-		Rectangle(hdc, clientRect.left + 30, clientRect.top + 30, clientRect.right - 700, clientRect.bottom - 300);
+		FillRect(hdc, &clientRect, (HBRUSH)GetStockObject(WHITE_BRUSH));
+		//Rectangle(hdc, clientRect.left + 30, clientRect.top + 30, clientRect.right - 700, clientRect.bottom - 300);
+		Rectangle(hdc, recX, recY, recX+recWidth, recY+recHeight);
+		RECT box = { recX, recY, recX + recWidth, recY + recHeight};
+		FillRect(hdc, &box, (HBRUSH)GetStockObject(BLACK_BRUSH));
 
 		EndPaint(hWnd, &ps);
 	}
-		break;
+	break;
+	
+	case WM_MOUSEWHEEL:
+	{
+		fwKeys = GET_KEYSTATE_WPARAM(wParam);
+		zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+		if (fwKeys == 4)
+			speedX += zDelta / 20;
+		else
+			speedY += zDelta / 20;
+	}
+	break;
 	case WM_LBUTTONDBLCLK:
 		MessageBox(hWnd, L"Hello, World!", L"Message", MB_OK);
 		break;
@@ -56,8 +95,21 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 	UpdateWindow(hWnd);
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
+		RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
+		if (speedX > 0)
+			speedX -= 1;
+		else if (speedX < 0)
+			speedX += 1;
+		if (speedY > 0)
+			speedY -= 1;
+		else if (speedY < 0)
+			speedY += 1;
+		Collision();
+		
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
+		recX += speedX;
+		recY += speedY;
 	}
 	return (int)msg.wParam;
 }
